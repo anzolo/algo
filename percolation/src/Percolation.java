@@ -68,6 +68,16 @@ public class Percolation {
 
     // does the system percolate?
     public boolean percolates() {
+        for (int i = 0; i < dimension; i++) {
+            if (isOpen(1, i + 1)) {
+                for (int j = 0; j < dimension; j++) {
+                    if (isOpen(dimension, j + 1)) {
+                        boolean isPercolated = union.find(getIdByIndexes(1, i + 1)) == union.find(getIdByIndexes(dimension, j + 1));
+                        if (isPercolated) return true;
+                    }
+                }
+            }
+        }
         return false;
     }
 
