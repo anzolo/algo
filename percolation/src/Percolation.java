@@ -4,6 +4,9 @@ public class Percolation {
 
     private final int[] grid;
     private final int dimension;
+    private final int topSetIndex; // virtual top
+    private final int bottomSetIndex; // virtual bottom
+    private int openCount = 0;
     private final WeightedQuickUnionUF union;
 
     private int getIdByIndexes(int row, int col) {
@@ -14,6 +17,9 @@ public class Percolation {
     public Percolation(int n) {
         if (n <= 0) throw new IllegalArgumentException();
 
+        topSetIndex = n * n;
+        bottomSetIndex = n * n + 1;
+
         dimension = n;
 
         grid = new int[n * n];
@@ -22,32 +28,41 @@ public class Percolation {
             grid[i] = 0;
         }
 
-        union = new WeightedQuickUnionUF(n * n);
+        union = new WeightedQuickUnionUF(n * n + 2);
     }
 
     // opens the site (row, col) if it is not open already
     public void open(int row, int col) {
-        if ((row <= 0) && (row > dimension)) throw new IllegalArgumentException();
-        if ((col <= 0) && (col > dimension)) throw new IllegalArgumentException();
+        if ((row <= 0) || (row > dimension)) throw new IllegalArgumentException();
+        if ((col <= 0) || (col > dimension)) throw new IllegalArgumentException();
 
+        openCount++;
 
         grid[getIdByIndexes(row, col)] = 1;
 
         // update union
-        union.union(getIdByIndexes(row, col), getIdByIndexes(row, col));
+//        union.union(getIdByIndexes(row, col), getIdByIndexes(row, col));
 
-        if ((row - 1 >= 0) && isOpen(row - 1, col)) union.union(getIdByIndexes(row - 1, col), getIdByIndexes(row, col));
-        if ((row + 1 < dimension) && isOpen(row + 1, col))
-            union.union(getIdByIndexes(row + 1, col), getIdByIndexes(row, col));
-        if ((col - 1 >= 0) && isOpen(row, col - 1)) union.union(getIdByIndexes(row, col - 1), getIdByIndexes(row, col));
-        if ((col + 1 < dimension) && isOpen(row, col + 1))
-            union.union(getIdByIndexes(row, col + 1), getIdByIndexes(row, col));
+        if (row == 1) union.union(getIdByIndexes(row, col), topSetIndex);
+        if (row == dimension) union.union(bottomSetIndex, getIdByIndexes(row, col));
+
+        if ((row - 1 > 0) && isOpen(row - 1, col)) union.union(getIdByIndexes(row, col), getIdByIndexes(row - 1, col));
+
+        if ((row + 1 <= dimension) && isOpen(row + 1, col))
+            union.union(getIdByIndexes(row, col), getIdByIndexes(row + 1, col));
+
+        if ((col - 1 > 0) && isOpen(row, col - 1)) union.union(getIdByIndexes(row, col), getIdByIndexes(row, col - 1));
+
+        if ((col + 1 <= dimension) && isOpen(row, col + 1))
+            union.union(getIdByIndexes(row, col), getIdByIndexes(row, col + 1));
+
+
     }
 
     // is the site (row, col) open?
     public boolean isOpen(int row, int col) {
-        if ((row <= 0) && (row > dimension)) throw new IllegalArgumentException();
-        if ((col <= 0) && (col > dimension)) throw new IllegalArgumentException();
+        if ((row <= 0) || (row > dimension)) throw new IllegalArgumentException();
+        if ((col <= 0) || (col > dimension)) throw new IllegalArgumentException();
 
         return grid[getIdByIndexes(row, col)] == 1;
 
@@ -55,30 +70,20 @@ public class Percolation {
 
     // is the site (row, col) full?
     public boolean isFull(int row, int col) {
-        if ((row <= 0) && (row > dimension)) throw new IllegalArgumentException();
-        if ((col <= 0) && (col > dimension)) throw new IllegalArgumentException();
+        if ((row <= 0) || (row > dimension)) throw new IllegalArgumentException();
+        if ((col <= 0) || (col > dimension)) throw new IllegalArgumentException();
 
-        return grid[getIdByIndexes(row, col)] == 0;
+        return union.find(getIdByIndexes(row, col)) == union.find(topSetIndex);
     }
 
     // returns the number of open sites
     public int numberOfOpenSites() {
-        return union.count();
+        return openCount;
     }
 
     // does the system percolate?
     public boolean percolates() {
-        for (int i = 0; i < dimension; i++) {
-            if (isOpen(1, i + 1)) {
-                for (int j = 0; j < dimension; j++) {
-                    if (isOpen(dimension, j + 1)) {
-                        boolean isPercolated = union.find(getIdByIndexes(1, i + 1)) == union.find(getIdByIndexes(dimension, j + 1));
-                        if (isPercolated) return true;
-                    }
-                }
-            }
-        }
-        return false;
+        return union.find(bottomSetIndex) == union.find(topSetIndex);
     }
 
     // test client (optional)
